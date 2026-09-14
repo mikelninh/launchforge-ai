@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { writeEvidence } from "@/lib/evidence-store";
 
 export const runtime = "nodejs";
 
@@ -87,8 +88,7 @@ export async function GET(
 
   const call = await response.json();
   const costUsd = Number(call?.cost ?? call?.costBreakdown?.total ?? 0);
-
-  return NextResponse.json({
+  const normalized = {
     configured: true,
     id: call.id,
     status: call.status,
@@ -100,6 +100,26 @@ export async function GET(
     transcript: transcriptFromCall(call),
     analysis: call.analysis ?? null,
     costBreakdown: call.costBreakdown ?? null,
-    source: "provider_verified",
+    source: "provider_verified" as const,
+  };
+
+  const persistence = await writeEvidence({
+    id: `vapi-call:${call.id}`,
+    kind: "provider_call",
+    occurredAt: call.endedAt ?? call.startedAt ?? new Date().toISOString(),
+    workflowId: "voice-support-resolution-v1",
+    callId: call.id,
+    source: "vapi",
+    payload: {
+      status: normalized.status,
+      endedReason: normalized.endedReason,
+      durationSeconds: normalized.durationSeconds,
+      providerCostUsd: normalized.providerCostUsd,
+      outcome: normalized.outcome,
+      qualityScore: normalized.qualityScore,
+      hasTranscript: Boolean(normalized.transcript),
+    },
   });
+
+  return NextResponse.json({ ...normalized, persistence });
 }
