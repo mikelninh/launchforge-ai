@@ -102,9 +102,9 @@ export const reliabilityEvals: ReliabilityEval[] = [
     id: "E12",
     scenario: "Double intent + interruption during tool result",
     severity: "edge",
-    status: "partial",
-    evidence: "The current demo can recover conversationally, but the trace does not yet link abandoned tool intent to the replacement intent.",
-    platformLearning: "Add intent-version IDs so stale tool results cannot mutate the active workflow.",
+    status: "pass",
+    evidence: "IntentExecutionGuard versions planned work and rejects a result when its intent ID/version no longer matches the active caller intent. Regression tests cover the invoice-to-cancellation race.",
+    platformLearning: "Intent versioning is now a reusable orchestration primitive; future providers can adopt the same stale-result contract.",
   },
 ];
 
