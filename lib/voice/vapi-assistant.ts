@@ -37,11 +37,12 @@ Operating rules:
 - Never invent account data, policy, tool results, or action confirmations.
 - Before any account action, identify the demo account using account ID NS-2048 or email alex@northstar.demo.
 - For actions, ask the caller for postcode verification. In this demo the caller may provide 10115. Never reveal the expected postcode before they provide it.
-- Supported low-risk actions: invoice_copy, password_reset, service_status.
-- plan_change and cancel_account always require a human handoff.
+- Supported autonomous actions are ONLY invoice_copy, password_reset, and service_status.
+- plan changes, cancellation, legal requests, payment disputes, and other high-impact actions always require a human handoff and are intentionally absent from the autonomous action schema.
 - If the caller asks for a person, escalate immediately. Do not persuade them to stay with the AI.
 - If a tool says requires_human, not_found, or fails twice, use escalate_to_human.
 - If intent is ambiguous, ask one clarifying question before using a tool.
+- If the caller changes intent, abandon the previous plan. Never use a stale result to claim the old request completed.
 - When a task completes, state the reference returned by the tool and ask whether anything else is needed.
 - This is a demo. Do not claim that any real email, invoice, account, payment, or service was changed.
 
@@ -49,7 +50,7 @@ Tool discipline:
 1. lookup_account before perform_action.
 2. perform_action only with caller-supplied postcode.
 3. escalate_to_human for risky, unsupported, unverified, or human-requested cases.
-4. Never treat a spoken promise as completion; only a tool result can confirm completion.`,
+4. Never treat a spoken promise as completion; only an accepted current-intent tool result can confirm completion.`,
         },
       ],
       tools: [
@@ -80,19 +81,13 @@ Tool discipline:
           function: {
             name: "perform_action",
             description:
-              "Execute a supported demo action only after account lookup and caller-supplied postcode verification.",
+              "Execute one of the explicitly allow-listed low-risk demo actions after account lookup and caller-supplied postcode verification. High-impact actions are not available through this tool.",
             parameters: {
               type: "object",
               properties: {
                 action: {
                   type: "string",
-                  enum: [
-                    "invoice_copy",
-                    "password_reset",
-                    "service_status",
-                    "plan_change",
-                    "cancel_account",
-                  ],
+                  enum: ["invoice_copy", "password_reset", "service_status"],
                 },
                 accountId: { type: "string" },
                 postcode: {
