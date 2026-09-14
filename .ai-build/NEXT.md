@@ -1,4 +1,4 @@
-# NEXT — v0.3
+# NEXT — v0.4
 
 ## Gate 1 — Provider-verified live evidence
 Add restricted Vapi credentials in the production environment and run the live evidence set in `evidence/LIVE_RUN_PLAN.md`.
@@ -11,14 +11,32 @@ Definition of done:
 - provider cost appears in ROI ledger,
 - evidence source reads `provider_verified`.
 
-## Gate 2 — Intent-versioned execution
-Close E12 by attaching an intent/version identifier to planned tool work and rejecting results from stale intent versions.
+Status: **external credential gate**. Code path is implemented; no provider result is labelled verified without the private API fetch succeeding.
 
-Definition of done:
-- caller can change intent while work is in flight,
-- stale tool result cannot change active workflow state,
-- trace shows abandoned intent and replacement intent,
-- automated regression test covers the race.
+## Gate 2 — Intent-versioned execution
+**Complete in v0.3.**
+
+Implemented:
+- `IntentExecutionGuard` assigns intent/version IDs to planned work,
+- intent replacement invalidates older in-flight work,
+- stale results are rejected before mutating active workflow state,
+- `/api/proof/race` exposes the invariant as a runtime proof,
+- automated regression tests cover invoice -> cancellation while old work is in flight.
 
 ## Gate 3 — Durable evidence store
-Replace browser-only/local demo history and log-only webhook handling with an authenticated event store before using real customer data.
+The application now has a server-side authenticated HTTP evidence adapter used by Vapi webhooks and provider-call evidence.
+
+Implemented:
+- normalized evidence contract,
+- bearer-authenticated `EVIDENCE_STORE_URL`,
+- Vapi webhook persistence path,
+- provider-call persistence path,
+- `/api/evidence` ingestion/status endpoint,
+- contract tests for configured/unconfigured behavior.
+
+Remaining before real customer data:
+- provision a **dedicated** backing store,
+- configure `EVIDENCE_STORE_URL` + `EVIDENCE_STORE_TOKEN`,
+- verify durable write/read behavior and retention policy.
+
+Recommended backing: dedicated Supabase project / Edge Function + Postgres, isolated from unrelated products.
