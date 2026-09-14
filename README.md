@@ -19,6 +19,8 @@ A fictional company, **Northstar Cloud**, receives high-volume inbound service c
 - expose a live transcript + trace,
 - fetch provider-verified call cost when Vapi private credentials are available,
 - calculate per-run and monthly ROI,
+- reject stale tool results after a caller changes intent,
+- persist normalized evidence through a pluggable authenticated store,
 - and run a 12-scenario reliability suite before launch.
 
 The same deployment pattern can be reused for support, sales qualification, scheduling, collections, operations intake, healthcare administration, finance operations, and other agent workflows.
@@ -36,20 +38,24 @@ Most AI demos optimize for whether the agent sounds impressive. LaunchForge asks
 7. Is the business case still positive under editable assumptions?
 8. What did this deployment teach the platform?
 
-## Live architecture
+## Architecture
 
 ```text
 Caller / browser mic
       ↓
-Voice provider (Vapi first; adapter boundary stays replaceable)
+Voice provider (Vapi first; provider boundary is replaceable)
       ↓
 LaunchForge agent blueprint
       ↓
 Deterministic tools + escalation policy
       ↓
+Intent-version guard
+      ↓
 Execution trace + transcript
       ↓
-Provider call evidence (when private key is configured)
+Provider call evidence
+      ↓
+Authenticated evidence adapter
       ↓
 Quality + outcome + cost
       ↓
@@ -60,13 +66,22 @@ Reliability gates + platform learning
 
 ## Evidence model
 
-LaunchForge labels every run as one of:
+Every execution is explicitly labelled:
 
 - `synthetic` — modelled evaluation evidence,
 - `estimated` — real/demo execution with transparent cost assumptions,
-- `provider_verified` — call duration/cost/evidence fetched from the voice provider.
+- `provider_verified` — duration/cost/evidence fetched from the voice provider.
 
 Synthetic evidence is never presented as a production customer result.
+
+Durable storage is behind a server-only authenticated HTTP contract:
+
+```bash
+EVIDENCE_STORE_URL=...
+EVIDENCE_STORE_TOKEN=...
+```
+
+That allows LaunchForge to use a dedicated Supabase ingest function, internal API, warehouse endpoint, or another isolated evidence system without coupling the application to one database SDK.
 
 ## ROI model
 
@@ -82,68 +97,121 @@ The flagship case intentionally sets revenue impact to zero. It must stand on op
 
 ## Reliability model
 
-The demo ships with 12 scenarios covering routine resolution, identity failure, tool failure, high-impact actions, explicit human requests, ambiguity, interruption, silence, unsupported policy questions, and more.
+The proof includes **12 / 12 passing scenarios** covering routine resolution, identity failure, tool failure, high-impact actions, explicit human requests, ambiguity, interruption, silence, unsupported policy questions, and stale asynchronous results.
 
-One edge case is intentionally marked `partial`: double intent + interruption can recover conversationally, but intent-version IDs are still needed to prevent stale tool results from mutating a replacement intent. This is recorded as a platform learning rather than hidden.
+### E12 — stale result race
+
+LaunchForge now assigns an intent/version identifier to planned work. If the caller changes intent while a tool is in flight, the old result is rejected rather than mutating the replacement workflow.
+
+The invariant is regression-tested and exposed at:
+
+```text
+/api/proof/race
+```
+
+Machine-readable proof status is available at:
+
+```text
+/api/proof/health
+```
+
+## Autonomous action boundary
+
+The live Vapi assistant can autonomously invoke only:
+
+- `invoice_copy`
+- `password_reset`
+- `service_status`
+
+Cancellation, plan changes, disputes, legal requests, unsupported actions, failed verification, and explicit human requests route to `escalate_to_human`.
+
+The server policy independently enforces the same boundary, so model capability and tool authorization are separate controls.
 
 ## Run locally
 
 ```bash
 npm install
 cp .env.example .env.local
+npm test
 npm run dev
 ```
 
 The simulator works with no external credentials.
 
-For a live browser voice call, add a restricted Vapi public key:
+For a live browser voice call:
 
 ```bash
 NEXT_PUBLIC_VAPI_PUBLIC_KEY=...
 ```
 
-The public key must allow the production origin and transient assistants, unless `NEXT_PUBLIC_VAPI_ASSISTANT_ID` points to a saved assistant.
-
-For provider-verified post-call cost and call evidence:
+For provider-verified post-call cost/evidence:
 
 ```bash
 VAPI_PRIVATE_API_KEY=...
 ```
 
-Never expose the private key to the browser.
+Never expose the private key to browser code.
+
+## Public-proof bundle
+
+`deployment/public-proof/` contains a self-contained deployable proof with:
+
+- the ROI case,
+- simulator,
+- 12 reliability scenarios,
+- runtime stale-result proof,
+- serverless deterministic tool endpoint,
+- optional Vapi Web live-call path using a restricted public key.
+
+This bundle exists so the proof can be hosted without depending on the full Next.js deployment pipeline.
 
 ## Demo script
 
 Use fictional account `NS-2048` and postcode `10115`.
 
-Try a safe request such as “I need my latest invoice.” Then try “Cancel my account.” The first should complete through a deterministic tool; the second must be rejected by policy code and routed to a human.
+Try “I need my latest invoice.” Then try “Cancel my account.” The first can complete through a deterministic low-risk tool; the second has no autonomous action path and must route to a human.
 
 ## Build OS
 
 `01 SHAPE → 02 SPECIFY → 03 DELEGATE → 04 PROVE → 05 SHIP → 06 WATCH`
 
-The `.ai-build/` directory captures the durable product and deployment decisions.
-
-## Product thesis
-
-Customer-specific field work only compounds when corrections become reusable platform capabilities. LaunchForge therefore treats every deployment as both:
-
-- a business outcome to deliver now, and
-- a source of verified workflow knowledge for every future deployment.
-
-That is the difference between selling hours and building an asset.
+See `.ai-build/` for SPEC, architecture, decisions, acceptance criteria, eval policy, runbook, autonomy policy, proof dossier, next gates, and retrospective.
 
 ## Current status
 
-**v0.2 — Flagship proof**
+**v0.4 — End-to-end proof system**
 
-- horizontal voice resolution case
-- live Vapi browser-call path
-- deterministic demo tool server
-- post-call provider evidence endpoint
-- trace + transcript UI
-- editable ROI ledger + monthly projection
-- 12-case reliability suite
-- explicit pilot/production gaps
+Implemented and CI-verified:
 
-Next production steps: durable event storage, webhook authentication, intent-versioning, real customer baseline import, and multi-provider voice adapters.
+- horizontal voice-resolution case,
+- Vapi Web live-call integration path,
+- transient assistant configuration,
+- deterministic tool policy,
+- narrow autonomous action schema,
+- human escalation,
+- intent-version guard + stale-result regression tests,
+- provider-evidence endpoint,
+- authenticated durable-evidence adapter,
+- Vapi webhook evidence path,
+- trace + transcript UI,
+- editable ROI ledger + monthly projection,
+- 12 / 12 reliability suite,
+- policy, ROI, intent and evidence contract tests,
+- production Next.js build,
+- self-contained public deployment bundle.
+
+### Remaining external go-live gates
+
+1. **Provider-verified live evidence** — configure restricted Vapi credentials and execute the real call set in `evidence/LIVE_RUN_PLAN.md` ([issue #1](https://github.com/mikelninh/launchforge-ai/issues/1)).
+2. **Dedicated durable store** — provision an isolated evidence database/ingest endpoint and configure the evidence adapter ([issue #2](https://github.com/mikelninh/launchforge-ai/issues/2)).
+
+Neither gate is silently substituted with synthetic evidence.
+
+## Product thesis
+
+Customer-specific field work compounds only when corrections become reusable platform capabilities. Every deployment should therefore produce both:
+
+- measurable customer value now, and
+- verified workflow knowledge that improves every future deployment.
+
+That is the difference between selling hours and building an asset.
