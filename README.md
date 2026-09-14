@@ -1,70 +1,149 @@
 # LaunchForge AI
 
-**Production OS for AI deployments.**
+**AI Deployment Control Plane — ship agents that prove their value.**
 
-LaunchForge turns a promising AI prototype into a production deployment that is integrated, evaluated, observable, and tied to measurable business outcomes.
+LaunchForge is a reusable system for taking AI agents from promising prototype to measurable production deployment: business baseline, tool contracts, reliability evals, human handoff, execution traces, provider evidence, ROI, and a learning loop that makes the next deployment faster.
 
-> Your demo works. LaunchForge gets it into production — and makes the next deployment faster.
+> The voice agent is not the product. The deployment system is.
 
-## Why this exists
+## Flagship proof: Voice Support Resolution
 
-Enterprise AI usually fails in the last mile: undocumented workflows, brittle integrations, unclear ownership, missing evals, and no reliable path from pilot to production.
+The current case is deliberately horizontal rather than tied to one industry.
 
-LaunchForge is a reusable operating system for solving that last mile while capturing what each deployment teaches us and folding it back into the platform.
+A fictional company, **Northstar Cloud**, receives high-volume inbound service calls. The LaunchForge demo agent can:
 
-## Core lifecycle
+- identify a demo account,
+- resolve approved low-risk requests,
+- use deterministic tools rather than inventing outcomes,
+- force human escalation for high-impact actions,
+- expose a live transcript + trace,
+- fetch provider-verified call cost when Vapi private credentials are available,
+- calculate per-run and monthly ROI,
+- and run a 12-scenario reliability suite before launch.
 
-1. **DISCOVER** — map the real business workflow, actors, systems, constraints, KPIs, nouns and verbs.
-2. **DESIGN** — define agent behavior, tools, escalation rules, data contracts, safety boundaries, and success criteria.
-3. **INTEGRATE** — connect APIs, CRMs, databases, ticketing systems, calendars, telephony, and internal tools.
-4. **EVALUATE** — run synthetic and scenario-based tests; classify failures before production.
-5. **UAT** — validate with real users and real workflows.
-6. **LAUNCH** — ship behind explicit production-readiness gates.
-7. **WATCH** — monitor quality, cost, latency, failures, drift, and business outcomes.
-8. **COMPOUND** — turn recurring field fixes into reusable product capabilities.
+The same deployment pattern can be reused for support, sales qualification, scheduling, collections, operations intake, healthcare administration, finance operations, and other agent workflows.
 
-## The product principle
+## Why this is different
 
-A deployment is not complete when one customer is happy.
+Most AI demos optimize for whether the agent sounds impressive. LaunchForge asks harder questions:
 
-It is complete when:
-- the customer gets measurable value,
-- the deployment is observable and supportable,
-- the failure modes are understood,
-- and the next deployment starts from a stronger platform.
+1. Did the task actually complete?
+2. Was the action authorized?
+3. Did the agent fail safely?
+4. Can we reconstruct what happened?
+5. What did the run cost?
+6. What human effort did it avoid?
+7. Is the business case still positive under editable assumptions?
+8. What did this deployment teach the platform?
 
-## What LaunchForge can become
+## Live architecture
 
-- **Internal operating system** for an AI deployment company
-- **Deployment service** for companies adopting AI agents
-- **Forward-deployed engineering toolkit**
-- **SaaS platform** for production readiness, evals, UAT, deployment tracking, and learning loops
+```text
+Caller / browser mic
+      ↓
+Voice provider (Vapi first; adapter boundary stays replaceable)
+      ↓
+LaunchForge agent blueprint
+      ↓
+Deterministic tools + escalation policy
+      ↓
+Execution trace + transcript
+      ↓
+Provider call evidence (when private key is configured)
+      ↓
+Quality + outcome + cost
+      ↓
+ROI ledger + monthly projection
+      ↓
+Reliability gates + platform learning
+```
+
+## Evidence model
+
+LaunchForge labels every run as one of:
+
+- `synthetic` — modelled evaluation evidence,
+- `estimated` — real/demo execution with transparent cost assumptions,
+- `provider_verified` — call duration/cost/evidence fetched from the voice provider.
+
+Synthetic evidence is never presented as a production customer result.
+
+## ROI model
+
+```text
+avoided human minutes = baseline human minutes - actual human minutes
+labour value = avoided minutes / 60 × loaded hourly cost
+gross value = labour value + attributable revenue impact
+net value = gross value - automation spend
+ROI = net value / automation spend
+```
+
+The flagship case intentionally sets revenue impact to zero. It must stand on operational value alone.
+
+## Reliability model
+
+The demo ships with 12 scenarios covering routine resolution, identity failure, tool failure, high-impact actions, explicit human requests, ambiguity, interruption, silence, unsupported policy questions, and more.
+
+One edge case is intentionally marked `partial`: double intent + interruption can recover conversationally, but intent-version IDs are still needed to prevent stale tool results from mutating a replacement intent. This is recorded as a platform learning rather than hidden.
+
+## Run locally
+
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+The simulator works with no external credentials.
+
+For a live browser voice call, add a restricted Vapi public key:
+
+```bash
+NEXT_PUBLIC_VAPI_PUBLIC_KEY=...
+```
+
+The public key must allow the production origin and transient assistants, unless `NEXT_PUBLIC_VAPI_ASSISTANT_ID` points to a saved assistant.
+
+For provider-verified post-call cost and call evidence:
+
+```bash
+VAPI_PRIVATE_API_KEY=...
+```
+
+Never expose the private key to the browser.
+
+## Demo script
+
+Use fictional account `NS-2048` and postcode `10115`.
+
+Try a safe request such as “I need my latest invoice.” Then try “Cancel my account.” The first should complete through a deterministic tool; the second must be rejected by policy code and routed to a human.
 
 ## Build OS
 
-LaunchForge follows:
+`01 SHAPE → 02 SPECIFY → 03 DELEGATE → 04 PROVE → 05 SHIP → 06 WATCH`
 
-`SHAPE → SPECIFY → DELEGATE → PROVE → SHIP → WATCH`
+The `.ai-build/` directory captures the durable product and deployment decisions.
 
-See `.ai-build/` for the operating documents.
+## Product thesis
 
-## Initial wedge
+Customer-specific field work only compounds when corrections become reusable platform capabilities. LaunchForge therefore treats every deployment as both:
 
-The first showcase will be a customer-facing AI agent deployment with:
-- structured intake
-- workflow mapping
-- tool/API integrations
-- synthetic scenario testing
-- escalation handling
-- UAT
-- production-readiness scoring
-- live deployment dashboard
-- post-launch learning capture
+- a business outcome to deliver now, and
+- a source of verified workflow knowledge for every future deployment.
 
-The architecture stays channel-agnostic so the same system can support voice, chat, back-office, support, sales, healthcare, legal, operations, and other agent workflows.
+That is the difference between selling hours and building an asset.
 
-## Status
+## Current status
 
-**v0.1 — Foundation**
+**v0.2 — Flagship proof**
 
-Current focus: encode the deployment methodology first, then build the operator product around it.
+- horizontal voice resolution case
+- live Vapi browser-call path
+- deterministic demo tool server
+- post-call provider evidence endpoint
+- trace + transcript UI
+- editable ROI ledger + monthly projection
+- 12-case reliability suite
+- explicit pilot/production gaps
+
+Next production steps: durable event storage, webhook authentication, intent-versioning, real customer baseline import, and multi-provider voice adapters.
